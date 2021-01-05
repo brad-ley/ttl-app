@@ -37,84 +37,95 @@ def set_times(sender, data):
                 else:
                     printdict[i] = get_value(o)
         add_data('times', timedict)
-        set_value("settings", f"On: {printdict['on']}{timedict['on'][0]}, Off: {printdict['off']}{timedict['off'][0]}, For: {printdict['rep']}{timedict['rep'][0]}")
+        add_data('timestr', f"On: {printdict['on']}{timedict['on'][0]}, Off: {printdict['off']}{timedict['off'][0]}, For: {printdict['rep']}{timedict['rep'][0]}")
+        set_value("settings", get_data('timestr'))
     else:
         set_value('status', "CURRENTLY RUNNING")
 
 
 def loop(sender, data):
     try:
-        port = get_data('port')
-        add_data('cancel', False)
-        add_data('pause', False)
-        count = 0
-        starttime = time.time()
-        endtime = starttime + get_data('rep')*get_data('times')['rep'][1]
-        add_data('running', True)
-        pausehold = 0
-        sleeptime = 0
-        # ser = serial.Serial(get_data('com'))
-        ser = get_data('ser')
-        if not ser.is_open:
-            ser.open() # use this to break before looping begins
-        add_data('which', 'off')
-        set_value("status", f"Running: LED off; port: {port}")
-        targtime = starttime + get_data('off')*get_data('times')['off'][1]
-        oldmousepos = pyautogui.position()
-        mouseadd = 3 * 60
-        mousetime = starttime + mouseadd
-        while time.time() <= endtime:
-            mousepos = pyautogui.position()
-            if oldmousepos == mousepos and time.time() > mousetime:
-                pyautogui.press("shift")
-                mousetime = time.time() + mouseadd
-            elif time.time() > mousetime:
-                mousetime = time.time() + mouseadd
-                oldmousepos = pyautogui.position()
-            if get_data('cancel'):
-                set_value("status", "Cancelled")
-                add_data('pause', False)
-                break
-            if get_data('pause'):
-                pausestart = time.time()
-                while True:
-                    set_value("status", "Paused")
-                    if get_data('cancel'):
-                        break
-                    if not get_data('pause'):
-                        pausehold += time.time() - pausestart
-                        endtime += time.time() - pausestart
-                        targtime += time.time() - pausestart
-                        break
-            if time.time() > targtime:
-                if get_data('which') == 'on':
-                    add_data('which', 'off')
-                    targtime += get_data('off')*get_data('times')['off'][1]
-                    set_value("status", f"Running: LED off; port: {port}")
-                    if not ser.is_open:
-                        ser.open()
-                    sleeptime = get_data('off')*get_data('times')['off'][1] / 100
-                elif get_data('which') == 'off':
-                    add_data('which', 'on')
-                    targtime += get_data('on')*get_data('times')['on'][1]
-                    set_value("status", f"Running: LED on; port: {port}")
-                    ser.close()
-                    sleeptime = get_data('on')*get_data('times')['on'][1] / 100
-            set_value("progbar", (time.time() - starttime - pausehold) / (endtime - starttime - pausehold))
-            time.sleep(sleeptime)
-        if not get_data('cancel'):
-            set_value("progbar", 1)
-            set_value("status", "Complete")
-        # ser.close()
-        if not ser.is_open:
-            ser.open()
-        add_data('running', False)
+        try:
+            if not get_data('ser').is_open:
+                get_data('ser').open() # use this to break before looping begins
+            conn = True
+        except serial.SerialException:
+            conn = False
+        if conn:
+            port = get_data('port')
+            add_data('cancel', False)
+            add_data('pause', False)
+            count = 0
+            starttime = time.time()
+            endtime = starttime + get_data('rep')*get_data('times')['rep'][1]
+            add_data('running', True)
+            pausehold = 0
+            sleeptime = 0
+            add_data('which', 'off')
+            set_value("status", f"Running: LED off; port: {port}")
+            set_value("settings", get_data('timestr'))
+            targtime = starttime + get_data('off')*get_data('times')['off'][1]
+            oldmousepos = pyautogui.position()
+            mouseadd = 3 * 60
+            mousetime = starttime + mouseadd
+            while time.time() <= endtime:
+                mousepos = pyautogui.position()
+                if oldmousepos == mousepos and time.time() > mousetime:
+                    pyautogui.press("shift")
+                    mousetime = time.time() + mouseadd
+                elif time.time() > mousetime:
+                    mousetime = time.time() + mouseadd
+                    oldmousepos = pyautogui.position()
+                if get_data('cancel'):
+                    set_value("status", "Cancelled")
+                    add_data('pause', False)
+                    break
+                if get_data('ser').port is None:
+                    set_value("status", "Disconnected")
+                    add_data('pause', False)
+                    break
+                if get_data('pause'):
+                    pausestart = time.time()
+                    while True:
+                        set_value("status", "Paused")
+                        if get_data('cancel'):
+                            break
+                        if not get_data('pause'):
+                            pausehold += time.time() - pausestart
+                            endtime += time.time() - pausestart
+                            targtime += time.time() - pausestart
+                            break
+                if time.time() > targtime:
+                    if get_data('which') == 'on':
+                        if not get_data('ser').is_open:
+                            get_data('ser').open()
+                        add_data('which', 'off')
+                        targtime += get_data('off')*get_data('times')['off'][1]
+                        set_value("status", f"Running: LED off; port: {port}")
+                        sleeptime = get_data('off')*get_data('times')['off'][1] / 100
+                    elif get_data('which') == 'off':
+                        get_data('ser').close()
+                        add_data('which', 'on')
+                        targtime += get_data('on')*get_data('times')['on'][1]
+                        set_value("status", f"Running: LED on; port: {port}")
+                        sleeptime = get_data('on')*get_data('times')['on'][1] / 100
+                set_value("progbar", (time.time() - starttime - pausehold) / (endtime - starttime - pausehold))
+                time.sleep(sleeptime)
+            if not (get_data('cancel') or get_data('ser').port is None):
+                set_value("progbar", 1)
+                set_value("status", "Complete")
+            if not get_data('ser').is_open and not get_data('ser').port is None:
+                get_data('ser').open()
+            add_data('running', False)
+        else:
+            set_value("settings", "PORT NOT SET")
+            set_value("status", "Inactive")
     except TypeError:
         set_value("settings", "Times not set")
         set_value("status", "Inactive")
     # except IndexError:
     except serial.SerialException:
-        set_value("settings", "PORT NOT SET")
+        set_value("settings", "PORT DISCONNECTED")
         set_value("status", "Inactive")
         add_data("running", False)
 
@@ -185,7 +196,7 @@ def serial_ports():
 
 def disconnect(sender, data):
     if get_data('ser').is_open:
-        ser.close()
+        get_data('ser').close()
     add_data('ser', serial.Serial())
     add_data('port', '')
 
@@ -193,18 +204,32 @@ def disconnect(sender, data):
 def setCOM(sender, data):
     add_data('port', sender.split('.')[-1].lstrip('usbserial-'))
     add_data('ser', serial.Serial(sender)) # want to idle in off state
+    set_value('settings', f"Port connected: {sender.split('.')[-1].lstrip('usbserial-')}")
+
+
+def resetCOM(sender, data):
+    delete_item("COM port", children_only=True)
+    add_data('ports', serial_ports())
+    for port in get_data('ports'):
+        add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM, parent="COM port")
+
+
+def create_menu():
+    with menu_bar("Main menu bar", parent="Main"):
+        with menu("Settings"):
+            with menu("COM port"):
+                add_data('ports', serial_ports())
+                for port in get_data('ports'):
+                    add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM)
+            add_menu_item("disconnect", label="Disconnect COM", callback=disconnect)
+            add_menu_item("refresh", label="Refresh COM list", callback=resetCOM)
+
 
 set_global_font_scale(1.2)
 set_main_window_size(375, 225)
 set_main_window_title("LED Timing GUI")
 with window("Main"):
-    with menu_bar("Main menu bar"):
-        with menu("Settings"):
-            with menu("COM port"):
-                for port in serial_ports():
-                    add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM)
-            add_menu_item("disconnect", label="Disconnect COM", callback=disconnect)
-
+    create_menu()
     add_button("Set times", callback=set_times, height=30, width=80)
     set_item_color("Set times", mvGuiCol_Button, [0, 0, 150, 255])
     add_same_line(spacing=7)
@@ -240,7 +265,7 @@ with window("Main"):
     add_checkbox('hr##rep', default_value=False, callback=mkfalse, label="hour")
     add_label_text("settings", default_value=f"On: not set, Off: not set, For: not set")
     add_label_text("status", default_value=f"Inactive")
-    add_progress_bar("progbar", parent="Main", overlay="Progress", width=341) 
+    add_progress_bar("progbar", overlay="Progress", width=341) 
 
     add_data('running', False)
     add_data('ser', serial.Serial())
