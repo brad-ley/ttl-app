@@ -66,7 +66,7 @@ def loop(sender, data):
             set_value("settings", get_data('timestr'))
             targtime = starttime + get_data('off')*get_data('times')['off'][1]
             oldmousepos = pyautogui.position()
-            mouseadd = 3 * 60
+            mouseadd = 4.5 * 60 # 4.5 min timer to press shift so computer doesn't sleep
             mousetime = starttime + mouseadd
             while time.time() <= endtime:
                 mousepos = pyautogui.position()
@@ -210,8 +210,11 @@ def setCOM(sender, data):
 def resetCOM(sender, data):
     delete_item("COM port", children_only=True)
     add_data('ports', serial_ports())
-    for port in get_data('ports'):
-        add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM, parent="COM port")
+    if len(get_data('ports')) == 0:
+        add_menu_item('No ports detected', enabled=False, parent="COM port")
+    else:
+        for port in get_data('ports'):
+            add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM, parent="COM port")
 
 
 def create_menu():
@@ -219,8 +222,11 @@ def create_menu():
         with menu("Settings"):
             with menu("COM port"):
                 add_data('ports', serial_ports())
-                for port in get_data('ports'):
-                    add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM)
+                if len(get_data('ports')) == 0:
+                    add_menu_item('No ports detected', enabled=False)
+                else:
+                    for port in get_data('ports'):
+                        add_menu_item(port, label=port.split('.')[-1].lstrip('usbserial-'), callback=setCOM)
             add_menu_item("disconnect", label="Disconnect COM", callback=disconnect)
             add_menu_item("refresh", label="Refresh COM list", callback=resetCOM)
 
