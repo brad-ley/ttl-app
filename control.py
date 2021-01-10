@@ -35,6 +35,7 @@ while True:
     starttime = time.time()
     looptime = time.time()
     status = GPIO.LOW
+    prevtime = 0
     if P(f).stat().st_mtime > prev:
         args = ast.literal_eval(P(f).read_text()) 
         com = args['com']
@@ -45,6 +46,7 @@ while True:
         if not com == 'stop':
             stopped = False
     if not stopped:
+        P(__file__).parent.joinpath('progress.txt').write_text(f"Progress 0%")
         while time.time() < starttime + rep:
             #    while cc < 1:
             if P(f).stat().st_mtime > prev:
@@ -66,6 +68,10 @@ while True:
                     pause = False
                     change = False
                 if time.time() > looptime:
+                    if rep > 600:
+                        if int(time.time() - starttime - prevtime) % (rep // 200) == 0 and int(time.time() - starttime - prevtime) > 0:
+                            P(__file__).parent.joinpath('progress.txt').write_text(f"Progress { (time.time() - starttime) / rep * 100 :.1f}%")
+                            prevtime = int(time.time() - starttime)
                     if P(f).stat().st_mtime > prev:
                         args = ast.literal_eval(P(f).read_text()) 
                         com = args['com']
