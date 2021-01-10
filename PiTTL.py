@@ -156,11 +156,17 @@ def startPi(sender, data):
         subprocess.Popen(["ssh","pi@169.231.182.39",'python3 ~/Documents/code/python/control.py'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
+def turnOff(sender, data):
+    subprocess.run(["ssh","pi@169.231.182.39",'pkill -f control.py'])
+    subprocess.Popen(["ssh","pi@169.231.182.39",'sudo poweroff'])
+
+
 def create_menu():
     with menu_bar("Main menu bar", parent="Main"):
         with menu("LED control"):
             add_menu_item('connect', label="Connect", callback=startPi)
             add_menu_item('disconnect', label="Disconnect", callback=startPi)
+            add_menu_item('poweroff', label="Turn off", callback=turnOff)
         add_menu_item('help', label="Help", callback=showHelp)
 
 def showHelp(sender,data):
