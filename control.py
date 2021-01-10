@@ -46,6 +46,7 @@ while True:
         if not com == 'stop':
             stopped = False
     if not stopped:
+        P(__file__).parent.joinpath('progress.txt').write_text(f"Progress 0%")
         while time.time() < starttime + rep:
             #    while cc < 1:
             if P(f).stat().st_mtime > prev:
