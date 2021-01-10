@@ -46,16 +46,13 @@ def set_times(sender, data):
                 printdict[i] = get_value(o)
     add_data('times', timedict)
     add_data('timestr', f"On: {printdict['on']}{timedict['on'][0]}, Off: {printdict['off']}{timedict['off'][0]}, For: {printdict['rep']}{timedict['rep'][0]}")
-    on = get_data('on')*get_data('times')['on'][1]
-    off = get_data('off')*get_data('times')['off'][1]
-    rep = get_data('rep')*get_data('times')['rep'][1]
     set_value("settings", get_data('timestr'))
 
 
 def loop(sender, data):
     try:
         set_value("status", f"Sending times to RPi")
-        time.sleep(3.5)
+        time.sleep(3.25)
         add_data('cancel', False)
         add_data('pause', False)
         count = 0
@@ -111,7 +108,7 @@ def loop(sender, data):
 
 def cancel_prog(sender, data):
     add_data('cancel', True)
-    subprocess.Popen(["ssh", "pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py stop 0 0 0 &"])
+    subprocess.Popen(["ssh", "pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py stop 0 0 0 100 &"])
     if get_data('pause'):
         add_data('pause', False)
         configure_item("Pause", label="Pause")
@@ -124,12 +121,14 @@ def pause_prog(sender, data):
         on = get_data('on')*get_data('times')['on'][1]
         off = get_data('off')*get_data('times')['off'][1]
         rep = get_data('rep')*get_data('times')['rep'][1]
-        subprocess.Popen(["ssh", "pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py '' {on} {off} {rep}"])
+        bri = get_value('Brightness')
+        subprocess.Popen(["ssh", "pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py '' {on} {off} {rep} {bri}"])
     elif get_data('running'):
         on = get_data('on')*get_data('times')['on'][1]
         off = get_data('off')*get_data('times')['off'][1]
         rep = get_data('rep')*get_data('times')['rep'][1]
-        subprocess.Popen(["ssh", "pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py pause {on} {off} {rep}"])
+        bri = get_value('Brightness')
+        subprocess.Popen(["ssh", "pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py pause {on} {off} {rep} {bri}"])
         add_data('pause', True)
         configure_item("Pause", label="Resume")
 
@@ -139,7 +138,8 @@ def start_cbk(sender, data):
         on = get_data('on')*get_data('times')['on'][1]
         off = get_data('off')*get_data('times')['off'][1]
         rep = get_data('rep')*get_data('times')['rep'][1]
-        subprocess.Popen(["ssh","pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py set {on} {off} {rep}"])
+        bri = get_value('Brightness')
+        subprocess.Popen(["ssh","pi@169.231.182.39",f"python3 ~/Documents/code/python/writecontrol.py set {on} {off} {rep} {bri}"])
         set_value("progbar", 0)
         run_async_function(loop, data)
     else:
@@ -164,31 +164,32 @@ def turnOff(sender, data):
 def create_menu():
     with menu_bar("Main menu bar", parent="Main"):
         with menu("LED control"):
-            add_menu_item('connect', label="Connect", callback=startPi)
-            add_menu_item('disconnect', label="Disconnect", callback=startPi)
-            add_menu_item('poweroff', label="Turn off", callback=turnOff)
+            add_menu_item('connect', label="Begin", callback=startPi)
+            add_menu_item('disconnect', label="Stop", callback=startPi)
+            add_menu_item('poweroff', label="Turn off Pi", callback=turnOff)
         add_menu_item('help', label="Help", callback=showHelp)
 
-def showHelp(sender,data):
+
+def showHelp(sender, data):
     log_info("\n-To begin, select 'Connect' from menu bar\n-Enter times (in seconds, minutes, or hours)\nin the entry boxes to the left\n-'On'/'Off'/'For' is time that LED is on/off/looped\n-Make sure you choose unit!\n-'Pause' will pause cycling, 'Stop' will end it.\n-Must be stopped to change settings\n-3 0.25s pulses mean sequence is done or\nnew settings have been applied.\n-2 long, 2 short means there's an error.")
     show_logger()
 
 
 set_global_font_scale(1.2)
-set_main_window_size(375, 225)
+set_main_window_size(375, 240)
 set_main_window_title("RPi-controlled LED GUI")
 with window("Main"):
     create_menu()
-    add_button("Set times", callback=set_times, height=30, width=80)
+    add_button("Set times", callback=set_times, height=30, width=80, label="Confirm")
     set_item_color("Set times", mvGuiCol_Button, [0, 0, 150, 255])
     add_same_line(spacing=7)
-    add_button("Start", callback=start_cbk, height=30, width=80)
+    add_button("Start", callback=start_cbk, height=30, width=80, label="Start")
     set_item_color("Start", mvGuiCol_Button, [0, 150, 0, 255])
     add_same_line(spacing=7)
     add_button("Pause", callback=pause_prog, label="Pause", height=30, width=80)
     set_item_color("Pause", mvGuiCol_Button, [200, 200, 0, 255])
     add_same_line(spacing=7)
-    add_button("Stop", callback=cancel_prog, height=30, width=80)
+    add_button("Stop", callback=cancel_prog, height=30, width=80, label="Stop")
     set_item_color("Stop", mvGuiCol_Button, [255, 0, 0, 255])
 
     add_input_text("On", label="On", width=80, hint="On time")
@@ -212,11 +213,13 @@ with window("Main"):
     add_checkbox('min##rep', default_value=True, callback=mkfalse, label="min")
     add_same_line(spacing=10)
     add_checkbox('hr##rep', default_value=False, callback=mkfalse, label="hour")
+    add_slider_int('Brightness', default_value=100, min_value=0, max_value=100, width=240)
     add_label_text("settings", default_value=f"On: not set, Off: not set, For: not set")
     add_label_text("status", default_value=f"Inactive")
     add_progress_bar("progbar", overlay="Progress", width=341) 
 
     add_data('running', False)
     add_data('pause', False)
+    add_data('brightness', 100)
 
 start_dearpygui(primary_window="Main")
