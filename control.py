@@ -120,16 +120,21 @@ while True:
                         pwm.ChangeDutyCycle(bb)
                         time.sleep(0.005)
                     ll += 1
-        ll = 0
-        while ll < 1:
-            for bb in range(0, 101, 5):
+        if stopped:
+            for bb in range(100, 0, -2):
                 pwm.ChangeDutyCycle(bb)
-                time.sleep(0.04)
-            for bb in range(95, 0, -5):
-                pwm.ChangeDutyCycle(bb)
-                time.sleep(0.04)
-            ll += 1
-        stopped = True
+                time.sleep(0.05)
+        else:
+            ll = 0
+            while ll < 2:
+                for bb in range(0, 101, 2):
+                    pwm.ChangeDutyCycle(bb)
+                    time.sleep(0.005)
+                for bb in range(95, 0, -2):
+                    pwm.ChangeDutyCycle(bb)
+                    time.sleep(0.005)
+                ll += 1
+            stopped = True
     
     if com == 'stop':
         time.sleep(0.05)
