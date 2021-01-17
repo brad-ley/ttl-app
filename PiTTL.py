@@ -50,6 +50,7 @@ def set_times(sender, data):
 
 
 def loop(sender, data):
+    print('starting loop')
     try:
         set_value("status", f"Sending times to RPi")
         time.sleep(3.25)
@@ -104,6 +105,7 @@ def loop(sender, data):
     except TypeError:
         set_value("settings", "Times not set")
         set_value("status", "Inactive")
+    print('ending loop')
 
 
 def cancel_prog(sender, data):
@@ -151,22 +153,44 @@ def mkfalse(sender, data):
 
 
 def startPi(sender, data):
-    subprocess.run(["ssh","pi@169.231.182.39",'pkill -f control.py'])
-    if sender == 'connect':
-        subprocess.Popen(["ssh","pi@169.231.182.39",'python3 ~/Documents/code/python/control.py'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    set_value("status", f"Connecting to RPi")
+    try:
+        result = subprocess.run(["ssh","-o","ConnectTimeout=4","pi@169.231.182.39",'pkill -f control.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.stderr:
+            raise subprocess.CalledProcessError(
+                    returncode = result.returncode,
+                    cmd = result.args,
+                    stderr = result.stderr
+                    )
+        if sender == 'connect':
+            subprocess.Popen(["ssh","pi@169.231.182.39",'python3 ~/Documents/code/python/control.py'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        set_value("status", f"Connected")
+    except subprocess.CalledProcessError as e:
+        set_value("status", f"RPi not connected to Wi-Fi")
 
 
 def turnOff(sender, data):
-    subprocess.run(["ssh","pi@169.231.182.39",'pkill -f control.py'])
-    subprocess.Popen(["ssh","pi@169.231.182.39",'sudo poweroff'])
+    set_value("status", f"Powering down")
+    try:
+        result = subprocess.run(["ssh","-o","ConnectTimeout=4","pi@169.231.182.39",'pkill -f control.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.stderr:
+            raise subprocess.CalledProcessError(
+                    returncode = result.returncode,
+                    cmd = result.args,
+                    stderr = result.stderr
+                    )
+        subprocess.Popen(["ssh","pi@169.231.182.39",'sudo poweroff'])
+        set_value("status", f"Power off")
+    except subprocess.CalledProcessError as e:
+        set_value("status", f"RPi not connected to Wi-Fi")
 
 
 def create_menu():
     with menu_bar("Main menu bar", parent="Main"):
         with menu("LED control"):
-            add_menu_item('connect', label="Begin", callback=startPi)
-            add_menu_item('disconnect', label="Stop", callback=startPi)
-            add_menu_item('poweroff', label="Turn off Pi", callback=turnOff)
+            add_menu_item('connect', label="Start", callback=startPi)
+            add_menu_item('poweroff', label="Turn off", callback=turnOff)
+            add_menu_item('poweroff', label="Power off", callback=turnOff)
         add_menu_item('help', label="Help", callback=showHelp)
 
 
