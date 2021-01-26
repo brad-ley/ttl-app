@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-##
 import RPi.GPIO as GPIO
 import time
 import sys
@@ -120,6 +119,7 @@ while True:
                         pwm.ChangeDutyCycle(bb)
                         time.sleep(0.005)
                     ll += 1
+            P(__file__).parent.joinpath('progress.txt').write_text(f"Progress 100%")
         if stopped:
             for bb in range(100, 0, -2):
                 pwm.ChangeDutyCycle(bb)
