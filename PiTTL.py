@@ -164,7 +164,9 @@ def startPi(sender, data):
                     )
         if sender == 'connect':
             subprocess.Popen(["ssh",f"pi@{DEVICE_IP}",'python3 ~/Documents/code/python/control.py'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        set_value("status", f"Connected")
+            set_value("status", f"Connected")
+        elif sender == 'disconnect':
+            set_value("status", f"Disconnected")
     except subprocess.CalledProcessError as e:
         set_value("status", f"RPi not connected to Wi-Fi")
 
@@ -189,7 +191,7 @@ def create_menu():
     with menu_bar("Main menu bar", parent="Main"):
         with menu("LED control"):
             add_menu_item('connect', label="Start", callback=startPi)
-            add_menu_item('poweroff', label="Stop", callback=turnOff)
+            add_menu_item('disconnect', label="Stop", callback=startPi)
             add_menu_item('poweroff', label="Power off", callback=turnOff)
         add_menu_item('help', label="Help", callback=showHelp)
 
