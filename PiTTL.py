@@ -18,7 +18,7 @@ Make sure you choose your time unit using the selection on the right!
 Use 'Stop' if you want to change parameters (and click 'Set times' again!)
 """
 # DEVICE_IP="169.254.213.90"
-DEVICE_IP="169.231.176.77"
+DEVICE_IP="169.231.216.150"
 
 def set_times(sender, data):
     targstrings = [('on', 'On'), ('off', 'Off'), ('rep', 'For')]
@@ -190,7 +190,7 @@ def turnOff(sender, data):
 def create_menu():
     with menu_bar("Main menu bar", parent="Main"):
         with menu("LED control"):
-            add_menu_item('connect', label="Start", callback=startPi)
+            add_menu_item('connect', label="Start/Refresh", callback=startPi)
             add_menu_item('disconnect', label="Stop", callback=startPi)
             add_menu_item('poweroff', label="Power off", callback=turnOff)
         add_menu_item('help', label="Help", callback=showHelp)
