@@ -17,7 +17,6 @@ Make sure you choose your time unit using the selection on the right!
 'Pause' will pause cycling, 'Stop' will break execution loop
 Use 'Stop' if you want to change parameters (and click 'Set times' again!)
 """
-# DEVICE_IP="169.254.213.90"
 DEVICE_IP="169.231.216.150"
 
 def set_times(sender, data):
@@ -110,7 +109,7 @@ def loop(sender, data):
 
 def cancel_prog(sender, data):
     add_data('cancel', True)
-    subprocess.Popen(["ssh",f"pi@{DEVICE_IP}",f"python3 ~/Documents/code/python/writecontrol.py stop 0 0 0 100 &"])
+    subprocess.Popen(["ssh",f"pi@{get_data('IP')}",f"python3 ~/Documents/code/python/writecontrol.py stop 0 0 0 100 &"])
     if get_data('pause'):
         add_data('pause', False)
         configure_item("Pause", label="Pause")
@@ -124,13 +123,13 @@ def pause_prog(sender, data):
         off = get_data('off')*get_data('times')['off'][1]
         rep = get_data('rep')*get_data('times')['rep'][1]
         bri = get_value('Brightness')
-        subprocess.Popen(["ssh", f"pi@{DEVICE_IP}",f"python3 ~/Documents/code/python/writecontrol.py '' {on} {off} {rep} {bri}"])
+        subprocess.Popen(["ssh", f"pi@{get_data('IP')}",f"python3 ~/Documents/code/python/writecontrol.py '' {on} {off} {rep} {bri}"])
     elif get_data('running'):
         on = get_data('on')*get_data('times')['on'][1]
         off = get_data('off')*get_data('times')['off'][1]
         rep = get_data('rep')*get_data('times')['rep'][1]
         bri = get_value('Brightness')
-        subprocess.Popen(["ssh",f"pi@{DEVICE_IP}",f"python3 ~/Documents/code/python/writecontrol.py pause {on} {off} {rep} {bri}"])
+        subprocess.Popen(["ssh",f"pi@{get_data('IP')}",f"python3 ~/Documents/code/python/writecontrol.py pause {on} {off} {rep} {bri}"])
         add_data('pause', True)
         configure_item("Pause", label="Resume")
 
@@ -141,7 +140,7 @@ def start_cbk(sender, data):
         off = get_data('off')*get_data('times')['off'][1]
         rep = get_data('rep')*get_data('times')['rep'][1]
         bri = get_value('Brightness')
-        subprocess.Popen(["ssh",f"pi@{DEVICE_IP}",f"python3 ~/Documents/code/python/writecontrol.py set {on} {off} {rep} {bri}"])
+        subprocess.Popen(["ssh",f"pi@{get_data('IP')}",f"python3 ~/Documents/code/python/writecontrol.py set {on} {off} {rep} {bri}"])
         set_value("progbar", 0)
         run_async_function(loop, data)
     else:
@@ -155,7 +154,7 @@ def mkfalse(sender, data):
 def startPi(sender, data):
     set_value("status", f"Connecting to RPi")
     try:
-        result = subprocess.run(["ssh","-o","ConnectTimeout=4",f"pi@{DEVICE_IP}",'pkill -f control.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(["ssh","-o","ConnectTimeout=4",f"pi@{get_data('IP')}",'pkill -f control.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.stderr:
             raise subprocess.CalledProcessError(
                     returncode = result.returncode,
@@ -163,7 +162,7 @@ def startPi(sender, data):
                     stderr = result.stderr
                     )
         if sender == 'connect':
-            subprocess.Popen(["ssh",f"pi@{DEVICE_IP}",'python3 ~/Documents/code/python/control.py'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.Popen(["ssh",f"pi@{get_data('IP')}",'python3 ~/Documents/code/python/control.py'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             set_value("status", f"Connected")
         elif sender == 'disconnect':
             set_value("status", f"Disconnected")
@@ -174,17 +173,22 @@ def startPi(sender, data):
 def turnOff(sender, data):
     set_value("status", f"Powering down")
     try:
-        result = subprocess.run(["ssh","-o","ConnectTimeout=4",f"pi@{DEVICE_IP}",'pkill -f control.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(["ssh","-o","ConnectTimeout=4",f"pi@{get_data('IP')}",'pkill -f control.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.stderr:
             raise subprocess.CalledProcessError(
                     returncode = result.returncode,
                     cmd = result.args,
                     stderr = result.stderr
                     )
-        subprocess.Popen(["ssh",f"pi@{DEVICE_IP}",'sudo poweroff'])
+        subprocess.Popen(["ssh",f"pi@{get_data('IP')}",'sudo poweroff'])
         set_value("status", f"Power off")
     except subprocess.CalledProcessError as e:
         set_value("status", f"RPi not connected to Wi-Fi")
+
+
+def setIP(sender, data):
+    IPs = {'chem':'', 'phys':'169.231.216.150', 'sc':'169.254.213.90'}
+    add_data('IP', IPs[sender])
 
 
 def create_menu():
@@ -193,6 +197,10 @@ def create_menu():
             add_menu_item('connect', label="Start/Refresh", callback=startPi)
             add_menu_item('disconnect', label="Stop", callback=startPi)
             add_menu_item('poweroff', label="Power off", callback=turnOff)
+        with menu("Location"):
+            add_menu_item('chem', label="Chemistry", callback=setIP)
+            add_menu_item('phys', label="Physics", callback=setIP)
+            add_menu_item('sc', label="San Clemente", callback=setIP)
         add_menu_item('help', label="Help", callback=showHelp)
 
 
@@ -247,5 +255,6 @@ with window("Main"):
     add_data('running', False)
     add_data('pause', False)
     add_data('brightness', 100)
+    add_data('IP', DEVICE_IP)
 
 start_dearpygui(primary_window="Main")
