@@ -17,37 +17,41 @@ Make sure you choose your time unit using the selection on the right!
 'Pause' will pause cycling, 'Stop' will break execution loop
 Use 'Stop' if you want to change parameters (and click 'Set times' again!)
 """
-DEVICE_IP="169.231.216.150"
+# DEVICE_IP="169.231.216.150"
+DEVICE_IP="raspberrypi.local"
 
 def set_times(sender, data):
-    targstrings = [('on', 'On'), ('off', 'Off'), ('rep', 'For')]
-    timedict = {'on':(' s', 1), 'off':(' s', 1), 'rep':(' s', 1)}
-    printdict = {'on':'not set', 'off':'not set', 'rep':'not set'}
-    multdict = {'s':1, 'min':60, 'hr':3600}
-    for i, o in targstrings:
-        try:
-            add_data(i, abs(float(get_value(o))))
-            set_value(o, get_data(i))
-            timedict[i] = ([' '+ii.split("##")[0] for ii in get_all_items() if (ii.endswith(f"##{i}") and get_value(ii) is True)][0], multdict[[ii.split("##")[0] for ii in get_all_items() if (ii.endswith(f"##{i}") and get_value(ii) is True)][0]])
-            if float(get_value(o)) == int(float(get_value(o))):
-                printdict[i] = int(float(get_value(o)))
-            else:
-                printdict[i] = get_value(o)
-        except ValueError:
-            add_data(i, 'not set')
-            set_value(o, "Error")
-            timedict[i] = ('', 0)
-        except IndexError:
-            add_data(i, abs(float(get_value(o))))
-            set_value(o, get_data(i))
-            timedict[i] = (' NO UNIT', 'Error string instead of float')
-            if float(get_value(o)) == int(float(get_value(o))):
-                printdict[i] = int(float(get_value(o)))
-            else:
-                printdict[i] = get_value(o)
-    add_data('times', timedict)
-    add_data('timestr', f"On: {printdict['on']}{timedict['on'][0]}, Off: {printdict['off']}{timedict['off'][0]}, For: {printdict['rep']}{timedict['rep'][0]}")
-    set_value("settings", get_data('timestr'))
+    if not get_data('running'):
+        targstrings = [('on', 'On'), ('off', 'Off'), ('rep', 'For')]
+        timedict = {'on':(' s', 1), 'off':(' s', 1), 'rep':(' s', 1)}
+        printdict = {'on':'not set', 'off':'not set', 'rep':'not set'}
+        multdict = {'s':1, 'min':60, 'hr':3600}
+        for i, o in targstrings:
+            try:
+                add_data(i, abs(float(get_value(o))))
+                set_value(o, get_data(i))
+                timedict[i] = ([' '+ii.split("##")[0] for ii in get_all_items() if (ii.endswith(f"##{i}") and get_value(ii) is True)][0], multdict[[ii.split("##")[0] for ii in get_all_items() if (ii.endswith(f"##{i}") and get_value(ii) is True)][0]])
+                if float(get_value(o)) == int(float(get_value(o))):
+                    printdict[i] = int(float(get_value(o)))
+                else:
+                    printdict[i] = get_value(o)
+            except ValueError:
+                add_data(i, 'not set')
+                set_value(o, "Error")
+                timedict[i] = ('', 0)
+            except IndexError:
+                add_data(i, abs(float(get_value(o))))
+                set_value(o, get_data(i))
+                timedict[i] = (' NO UNIT', 'Error string instead of float')
+                if float(get_value(o)) == int(float(get_value(o))):
+                    printdict[i] = int(float(get_value(o)))
+                else:
+                    printdict[i] = get_value(o)
+        add_data('times', timedict)
+        add_data('timestr', f"On: {printdict['on']}{timedict['on'][0]}, Off: {printdict['off']}{timedict['off'][0]}, For: {printdict['rep']}{timedict['rep'][0]}")
+        set_value("settings", get_data('timestr'))
+    else:
+        set_value("status", 'CURRENTLY RUNNING')
 
 
 def loop(sender, data):
@@ -144,7 +148,7 @@ def start_cbk(sender, data):
         set_value("progbar", 0)
         run_async_function(loop, data)
     else:
-        set_value("status", "ALREADY RUNNING")
+        set_value("status", "STOP BEFORE STARTING")
 
 
 def mkfalse(sender, data):
@@ -167,7 +171,10 @@ def startPi(sender, data):
         elif sender == 'disconnect':
             set_value("status", f"Disconnected")
     except subprocess.CalledProcessError as e:
-        set_value("status", f"RPi not connected to Wi-Fi")
+        if get_data('IP') == 'local':
+            set_value("status", f"RPi not connected via cable")
+        else:
+            set_value("status", f"RPi not connected to Wi-Fi")
 
 
 def turnOff(sender, data):
@@ -203,10 +210,10 @@ def create_menu():
             add_menu_item('disconnect', label="Stop", callback=startPi)
             add_menu_item('poweroff', label="Power off", callback=turnOff)
         with menu("Location"):
-            add_menu_item('chem', label="Chemistry", callback=setIP)
+            add_menu_item('chem', label="Chemistry", callback=setIP, enabled=False)
             add_menu_item('phys', label="Physics", callback=setIP)
             add_menu_item('sc', label="San Clemente", callback=setIP)
-            add_menu_item('local', label="Local", callback=setIP)
+            add_menu_item('local', label="Wired", callback=setIP)
         add_menu_item('help', label="Help", callback=showHelp)
 
 
