@@ -187,7 +187,12 @@ def turnOff(sender, data):
 
 
 def setIP(sender, data):
-    IPs = {'chem':'', 'phys':'169.231.216.150', 'sc':'169.254.213.90'}
+    IPs = {
+            'chem':'',
+            'phys':'169.231.216.150',
+            'sc':'169.254.213.90',
+            'local':'raspberrypi.local',
+            }
     add_data('IP', IPs[sender])
 
 
@@ -201,6 +206,7 @@ def create_menu():
             add_menu_item('chem', label="Chemistry", callback=setIP)
             add_menu_item('phys', label="Physics", callback=setIP)
             add_menu_item('sc', label="San Clemente", callback=setIP)
+            add_menu_item('local', label="Local", callback=setIP)
         add_menu_item('help', label="Help", callback=showHelp)
 
 
